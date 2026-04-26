@@ -9,7 +9,10 @@ from flask import Flask
 from telegram import ReplyKeyboardMarkup, Update
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
 
 # =========================
 # ENV
@@ -166,12 +169,16 @@ app = Flask(__name__)
 def home():
     return "Bot is running"
 
+@app.route("/healthz")
+def healthz():
+    return "ok"
+
 def run_web():
     port = int(os.getenv("PORT", "10000"))
     app.run(host="0.0.0.0", port=port)
 
 def keep_alive():
-    t = threading.Thread(target=run_web)
+    t = threading.Thread(target=run_web, daemon=True)
     t.start()
 
 # =========================
@@ -327,7 +334,7 @@ def is_filler_line(line):
     fillers = [
         "السلام عليكم", "وعليكم السلام", "الله يسعدك", "الله يرضى عليك", "مشكوره", "مشكور",
         "ياعسل", "يا قلبي", "ياقلبي", "طيب", "تمام", "باذن الله", "إن شاء الله", "ان شاء الله",
-        "مشكوره يالحب", "شكرًا", "شكرا", "مشكوره", "مشكور", "لا تشيلي هم", "الله يرضى عليك"
+        "مشكوره يالحب", "شكرًا", "شكرا", "لا تشيلي هم", "الله يرضى عليك"
     ]
     low = line.replace("ـ", "").strip().lower()
     return any(f in low for f in fillers)
@@ -434,6 +441,9 @@ def summarize_quick_text(raw_text):
 
 def order_summary(data):
     mode_label = "سريع" if data.get("request_mode") == "quick" else "منظم"
+    price_val = data.get("price")
+    price_txt = f"{price_val:.2f} ريال" if isinstance(price_val, (int, float)) else "-"
+    deadline_txt = date_text_for_group(data["deadline"]) if data.get("deadline") else "-"
     return (
         f"📋 ملخص الطلب ({mode_label}):\n\n"
         f"👤 الوسيط: {data.get('intermediary_name', '-')}\n"
@@ -441,8 +451,8 @@ def order_summary(data):
         f"🗂 الفئة: {data.get('category', '-')}\n"
         f"📌 عنوان الطلب: {data.get('title', '-')}\n"
         f"📝 التفاصيل: {data.get('details', '-')}\n"
-        f"💰 السعر: {data.get('price', '-')}" + (" ريال" if data.get("price") is not None else "") + "\n"
-        f"⏱ الموعد: {date_text_for_group(data['deadline']) if data.get('deadline') else '-'}\n"
+        f"💰 السعر: {price_txt}\n"
+        f"⏱ الموعد: {deadline_txt}\n"
         f"⚡ الأولوية: {data.get('priority', '-')}\n"
     )
 
